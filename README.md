@@ -97,11 +97,6 @@ Everything runs on your own machine. No API keys, no per-request cost.
 
 See [Architecture](#architecture) above — each folder has exactly one responsibility, which makes the codebase easy to navigate and extend later.
 
-## Requirements
-
-- Python 3.9+
-- ~2–3 GB free disk space (for downloaded models, on first run)
-- A normal laptop CPU is enough — a GPU is not required, though it will speed things up if you have one.
 
 ## Installation
 
@@ -112,21 +107,13 @@ See [Architecture](#architecture) above — each folder has exactly one responsi
 python -m venv venv
 ```
 
-**macOS/Linux:**
-```bash
-python3 -m venv venv
-```
+
 
 ### Activate Virtual Environment
 
 **Windows:**
 ```bash
 venv\Scripts\activate
-```
-
-**macOS/Linux:**
-```bash
-source venv/bin/activate
 ```
 
 ### Install Dependencies
@@ -149,44 +136,6 @@ Either:
 streamlit run app/main.py
 ```
 
-This opens the app in your browser, usually at `http://localhost:8501`.
-
-## How to Use
-
-1. **Upload** one or more PDF files using the file uploader.
-2. Click **"Process Documents"**. This runs the full ingestion pipeline (extract → chunk → embed → store). Wait for the success message.
-3. Type a question into the **"Ask a question about your documents..."** box.
-4. Click **"Get Answer"**. The app will:
-   - Retrieve the most relevant chunks from ChromaDB.
-   - Pass them to the local LLM.
-   - Display the generated answer and the source PDF filenames.
-5. Optionally expand **"See retrieved context"** to inspect exactly which chunks were used — great for understanding *why* the model answered the way it did.
-
-You only need to re-run "Process Documents" when you add *new* PDFs — ChromaDB remembers everything you've already indexed, even after restarting the app.
-
-## Local Models
-
-| Purpose | Model | Approx. Size | Notes |
-|---|---|---|---|
-| Embeddings | `sentence-transformers/all-MiniLM-L6-v2` | ~80 MB | Fast, runs comfortably on CPU |
-| Generation | `google/flan-t5-base` | ~1 GB | Runs on CPU; a few seconds per answer on a typical laptop |
-
-**If your computer is slow or low on RAM**, open `generation/generator.py` and change:
-```python
-LLM_MODEL_NAME = "google/flan-t5-base"
-```
-to:
-```python
-LLM_MODEL_NAME = "google/flan-t5-small"
-```
-This smaller model (~80M parameters, ~300 MB) runs faster with less RAM, at the cost of somewhat less capable answers on harder questions.
-
-## Limitations
-
-- Small local LLMs are not as capable as large hosted models (GPT-4, Claude, Gemini, etc.) — answers may occasionally be brief or imperfect, especially for complex, multi-part questions.
-- PDFs that are scanned images (with no selectable text layer) cannot be read — this project does not include OCR.
-- Retrieval is based on chunk-level similarity only; there is no reranking or query rewriting (see Future Improvements).
-- Everything runs on CPU by default, so processing large PDFs or many documents at once may take a little time.
 
 ## Future Improvements
 
