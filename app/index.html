@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Document Q&A</title>
+<style>
+  :root {
+    --bg-0: #f6f8fb;
+    --bg-1: #ffffff;
+    --bg-2: #ffffff;
+    --bg-3: #eef2f7;
+    --border: #e3e8ef;
+    --border-2: #d7dee8;
+    --text: #1a2233;
+    --text-dim: #4b5b73;
+    --text-mute: #7a8798;
+    --accent: #2563eb;
+    --accent-2: #7c3aed;
+    --ok: #15803d;
+    --warn: #b45309;
+    --err: #dc2626;
+    --radius: 14px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.06);
+    --shadow-md: 0 4px 14px rgba(16,24,40,0.08);
+    --shadow-lg: 0 10px 30px rgba(37,99,235,0.15);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                 "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg-0);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: 100vh;
+  }
+
+  /* ---------------- Sidebar ---------------- */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 1.5rem 1.25rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    background: #fbfcfe;
+  }
+  .brand {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.25rem;
+    color: var(--text);
+  }
+  .brand-sub {
+    color: var(--text-mute);
+    font-size: 0.82rem;
+    margin-bottom: 1.25rem;
+  }
+  .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+
+  .side-heading {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--text-mute);
+    font-weight: 700;
+    margin-bottom: 0.6rem;
+  }
+  .pipeline-step {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    margin-bottom: 0.55rem;
+  }
+  .pipeline-step .num {
+    flex-shrink: 0;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    border: 1px solid var(--border-2);
+    color: var(--text-dim);
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    margin-top: 2px;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+  .status-ok   { background: #e8f5ec; color: var(--ok); border: 1px solid #bfe3c8; }
+  .status-warn { background: #fdf3e3; color: var(--warn); border: 1px solid #f0dcb5; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  .file-list { margin-top: 0.75rem; }
+  .file-list details summary {
+    cursor: pointer;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    padding: 0.25rem 0;
+  }
+  .file-list ul {
+    margin: 0.4rem 0 0 0;
+    padding-left: 1.1rem;
+    font-size: 0.82rem;
+    color: var(--text-mute);
+  }
+  .file-list li { margin-bottom: 0.2rem; }
+
+  .tip {
+    font-size: 0.78rem;
+    color: var(--text-mute);
+    line-height: 1.5;
+  }
+
+  /* ---------------- Main ---------------- */
+  main {
+    padding: 2rem 2.5rem 3rem;
+    max-width: 1100px;
+  }
+
+  .hero {
+    padding: 2rem 2.25rem;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+    margin-bottom: 2rem;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.25), transparent 60%);
+    pointer-events: none;
+  }
+  .hero h1 {
+    margin: 0;
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #fff;
+  }
+  .hero p {
+    margin: 0.45rem 0 0 0;
+    color: rgba(255,255,255,0.95);
+    font-size: 1rem;
+  }
+  .badge {
+    display: inline-block;
+    margin-top: 1rem;
+    padding: 0.28rem 0.75rem;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.22);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1.25fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+
+  .panel {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+  }
+  .panel h2 {
+    margin: 0 0 1rem 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    display: flex; align-items: center; gap: 0.55rem;
+    color: var(--text);
+  }
+  .step-num {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    font-size: 0.8rem;
+    font-weight: 700;
+  }
+
+  /* ---------------- Dropzone ---------------- */
+  .dropzone {
+    border: 2px dashed var(--border-2);
+    border-radius: var(--radius-sm);
+    padding: 2rem 1.25rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    background: #fbfcfe;
+    margin-bottom: 1rem;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: var(--accent);
+    background: #eff5ff;
+  }
+  .dropzone .icon {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+  .dropzone .title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .dropzone .sub {
+    color: var(--text-mute);
+    font-size: 0.82rem;
+    margin-top: 0.25rem;
+  }
+  .dropzone input[type="file"] { display: none; }
+
+  .file-chips {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+  .file-chip {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.65rem;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .file-chip .x {
+    cursor: pointer;
+    color: var(--text-mute);
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1;
+  }
+  .file-chip .x:hover { color: var(--err); }
+
+  /* ---------------- Buttons ---------------- */
+  button {
+    font-family: inherit;
+    font-size: 0.92rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    padding: 0.7rem 1.1rem;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+    width: 100%;
+  }
+  button.primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(37,99,235,0.28);
+  }
+  button.primary:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(37,99,235,0.38);
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ---------------- Question input ---------------- */
+  .ask-row {
+    display: flex; gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .ask-row input {
+    flex: 1;
+    background: #fff;
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.95rem;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .ask-row input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  }
+  .ask-row input::placeholder { color: var(--text-mute); }
+  .ask-row button { width: auto; padding-left: 1.4rem; padding-right: 1.4rem; }
+
+  /* ---------------- Answer / sources ---------------- */
+  .section-label {
+    text-transform: uppercase;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--text-mute);
+    font-weight: 700;
+    margin: 1.4rem 0 0.6rem 0;
+  }
+  .answer-box {
+    background: #fbfcfe;
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 1.15rem 1.35rem;
+    font-size: 1rem;
+    line-height: 1.65;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    animation: fadeIn 0.25s ease;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  .source-chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .source-chip {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    background: var(--bg-3);
+    color: var(--text-dim);
+    border: 1px solid var(--border-2);
+    border-radius: 999px;
+    padding: 0.28rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  /* ---------------- Retrieved-context details ---------------- */
+  details.context {
+    margin-top: 1.4rem;
+    background: #fbfcfe;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  details.context > summary {
+    cursor: pointer;
+    padding: 0.75rem 1rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    list-style: none;
+    user-select: none;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  details.context > summary::-webkit-details-marker { display: none; }
+  details.context > summary::before {
+    content: "▸";
+    color: var(--text-mute);
+    transition: transform 0.15s ease;
+    display: inline-block;
+  }
+  details.context[open] > summary::before { transform: rotate(90deg); }
+  details.context > summary:hover { background: #f1f5fb; }
+
+  .chunk {
+    padding: 0.9rem 1rem;
+    border-top: 1px solid var(--border);
+    animation: fadeIn 0.2s ease;
+  }
+  .chunk-head {
+    display: flex; flex-wrap: wrap; gap: 0.6rem;
+    align-items: center;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+  .chunk-head .filename {
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 0.1rem 0.45rem;
+    color: var(--text-dim);
+  }
+  .chunk-head .distance {
+    margin-left: auto;
+    color: var(--text-mute);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.78rem;
+  }
+  .chunk pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.84rem;
+    color: var(--text);
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    line-height: 1.55;
+  }
+
+  /* ---------------- Alerts ---------------- */
+  .alert {
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    margin-top: 0.9rem;
+    border: 1px solid;
+    animation: fadeIn 0.2s ease;
+  }
+  .alert.error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+  .alert.success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+  }
+
+  /* ---------------- Spinner ---------------- */
+  .spinner-row {
+    display: none;
+    align-items: center;
+    gap: 0.6rem;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    margin-top: 0.9rem;
+  }
+  .spinner-row.active { display: flex; }
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid var(--border-2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------------- Empty state ---------------- */
+  .empty {
+    color: var(--text-mute);
+    font-size: 0.88rem;
+    text-align: center;
+    padding: 1.5rem 1rem;
+    border: 1px dashed var(--border-2);
+    border-radius: var(--radius-sm);
+    background: #fbfcfe;
+  }
+
+  /* ---------------- Responsive ---------------- */
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    .sidebar {
+      position: static;
+      height: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+    main { padding: 1.5rem 1.25rem 2.5rem; }
+    .grid { grid-template-columns: 1fr; }
+    .hero { padding: 1.5rem 1.5rem; }
+    .hero h1 { font-size: 1.5rem; }
+  }
+
+  @media (max-width: 560px) {
+    .ask-row { flex-direction: column; }
+    .ask-row button { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ==================== SIDEBAR ==================== -->
+  <aside class="sidebar">
+    <div class="brand">📚 Document Q&amp;A</div>
+    <div class="brand-sub">A fully local RAG pipeline — your files never leave this machine.</div>
+
+    <div class="divider"></div>
+
+    <div class="side-heading">Pipeline</div>
+    <div class="pipeline-step"><span class="num">1</span><span><strong>Ingest</strong> — extract &amp; chunk PDFs</span></div>
+    <div class="pipeline-step"><span class="num">2</span><span><strong>Retrieve</strong> — find relevant chunks</span></div>
+    <div class="pipeline-step"><span class="num">3</span><span><strong>Generate</strong> — local LLM writes the answer</span></div>
+
+    <div class="divider"></div>
+
+    <div class="side-heading">Index status</div>
+    <div id="status-pill" class="status-pill status-warn">
+      <span class="dot"></span><span id="status-text">No documents indexed</span>
+    </div>
+    <div id="file-list" class="file-list"></div>
+
+    <div class="divider"></div>
+
+    <div class="tip">
+      💡 Answers are only as good as retrieval. Open
+      <em>Retrieved context</em> under each answer to see what the retriever actually found.
+    </div>
+  </aside>
+
+  <!-- ==================== MAIN ==================== -->
+  <main>
+    <div class="hero">
+      <h1>Document Q&amp;A System</h1>
+      <p>Ask questions about your own PDFs — answered by a fully local RAG pipeline.</p>
+      <span class="badge">🔒 100% local · no cloud calls</span>
+    </div>
+
+    <div class="grid">
+
+      <!-- ---------- LEFT: upload ---------- -->
+      <section class="panel">
+        <h2><span class="step-num">1</span> Upload documents</h2>
+
+        <label for="file-input" class="dropzone" id="dropzone">
+          <span class="icon">📄</span>
+          <div class="title">Drop PDFs here or click to browse</div>
+          <div class="sub">Multiple files supported</div>
+          <input type="file" id="file-input" accept="application/pdf,.pdf" multiple />
+        </label>
+
+        <div id="file-chips" class="file-chips"></div>
+
+        <button id="process-btn" class="primary" disabled>⚙️ Process documents</button>
+
+        <div id="ingest-spinner" class="spinner-row">
+          <span class="spinner"></span>
+          <span>Extracting text, chunking, embedding, storing…</span>
+        </div>
+
+        <div id="ingest-alert"></div>
+      </section>
+
+      <!-- ---------- RIGHT: ask ---------- -->
+      <section class="panel">
+        <h2><span class="step-num">2</span> Ask a question</h2>
+
+        <div class="ask-row">
+          <input
+            type="text"
+            id="question-input"
+            placeholder="e.g. What does the contract say about termination?"
+            autocomplete="off"
+          />
+          <button id="ask-btn" class="primary">🔎 Get answer</button>
+        </div>
+
+        <div id="ask-spinner" class="spinner-row">
+          <span class="spinner"></span>
+          <span id="ask-spinner-text">Searching documents for relevant context…</span>
+        </div>
+
+        <div id="ask-alert"></div>
+
+        <div id="answer-area"></div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   State
+   ============================================================ */
+const state = {
+  files: [],
+  indexedFiles: [],
+  numChunks: 0,
+};
+
+const $ = (sel) => document.querySelector(sel);
+
+const dropzone       = $("#dropzone");
+const fileInput      = $("#file-input");
+const fileChips      = $("#file-chips");
+const processBtn     = $("#process-btn");
+const ingestAlert    = $("#ingest-alert");
+const ingestSpinner  = $("#ingest-spinner");
+
+const questionInput  = $("#question-input");
+const askBtn         = $("#ask-btn");
+const askAlert       = $("#ask-alert");
+const askSpinner     = $("#ask-spinner");
+const askSpinnerText = $("#ask-spinner-text");
+const answerArea     = $("#answer-area");
+
+const statusPill     = $("#status-pill");
+const statusText     = $("#status-text");
+const fileList       = $("#file-list");
+
+
+/* ============================================================
+   Helpers
+   ============================================================ */
+function escapeHtml(str) {
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function showAlert(el, kind, msg) {
+  el.innerHTML = `<div class="alert ${kind}">${escapeHtml(msg)}</div>`;
+}
+function clearAlert(el) { el.innerHTML = ""; }
+
+function humanSize(bytes) {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + " KB";
+  return (bytes / 1024 / 1024).toFixed(1) + " MB";
+}
+
+
+/* ============================================================
+   Sidebar status
+   ============================================================ */
+function renderStatus() {
+  if (state.numChunks > 0) {
+    statusPill.className = "status-pill status-ok";
+    statusText.textContent = `${state.numChunks} chunks indexed`;
+    fileList.innerHTML = `
+      <details>
+        <summary>Indexed files (${state.indexedFiles.length})</summary>
+        <ul>${state.indexedFiles.map(f => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
+      </details>`;
+  } else {
+    statusPill.className = "status-pill status-warn";
+    statusText.textContent = "No documents indexed";
+    fileList.innerHTML = "";
+  }
+}
+renderStatus();
+
+
+/* ============================================================
+   File selection / dropzone
+   ============================================================ */
+function renderChips() {
+  fileChips.innerHTML = state.files.map((f, i) => `
+    <span class="file-chip">
+      📄 ${escapeHtml(f.name)} · ${humanSize(f.size)}
+      <span class="x" data-idx="${i}" title="Remove">×</span>
+    </span>
+  `).join("");
+  processBtn.disabled = state.files.length === 0;
+
+  fileChips.querySelectorAll(".x").forEach(el => {
+    el.addEventListener("click", () => {
+      state.files.splice(Number(el.dataset.idx), 1);
+      renderChips();
+    });
+  });
+}
+
+function addFiles(list) {
+  const incoming = Array.from(list).filter(
+    f => f.name.toLowerCase().endsWith(".pdf")
+  );
+  const key = (f) => f.name + "|" + f.size;
+  const seen = new Set(state.files.map(key));
+  for (const f of incoming) {
+    if (!seen.has(key(f))) {
+      state.files.push(f);
+      seen.add(key(f));
+    }
+  }
+  renderChips();
+}
+
+fileInput.addEventListener("change", (e) => addFiles(e.target.files));
+
+["dragenter", "dragover"].forEach(evt =>
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.add("dragover");
+  })
+);
+["dragleave", "drop"].forEach(evt =>
+  dropzone.addEventListener(evt, (e) => {
+    e.preventDefault();
+    dropzone.classList.remove("dragover");
+  })
+);
+dropzone.addEventListener("drop", (e) => {
+  if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files);
+});
+
+
+/* ============================================================
+   Ingest
+   ============================================================ */
+processBtn.addEventListener("click", async () => {
+  if (state.files.length === 0) {
+    showAlert(ingestAlert, "error", "Please upload at least one PDF before processing.");
+    return;
+  }
+
+  clearAlert(ingestAlert);
+  ingestSpinner.classList.add("active");
+  processBtn.disabled = true;
+
+  const formData = new FormData();
+  state.files.forEach(f => formData.append("files", f, f.name));
+
+  try {
+    const res = await fetch("/ingest", { method: "POST", body: formData });
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data.detail || `Request failed (${res.status})`);
+    }
+
+    state.indexedFiles = data.files || state.files.map(f => f.name);
+    state.numChunks = data.num_chunks || 0;
+    renderStatus();
+
+    showAlert(
+      ingestAlert,
+      "success",
+      `Processed ${state.indexedFiles.length} document(s) into ${state.numChunks} chunks.`
+    );
+  } catch (err) {
+    showAlert(ingestAlert, "error", err.message || String(err));
+  } finally {
+    ingestSpinner.classList.remove("active");
+    processBtn.disabled = state.files.length === 0;
+  }
+});
+
+
+/* ============================================================
+   Ask
+   ============================================================ */
+async function ask() {
+  const question = questionInput.value.trim();
+  if (!question) {
+    showAlert(askAlert, "error", "Please type a question before asking.");
+    return;
+  }
+
+  clearAlert(askAlert);
+  answerArea.innerHTML = "";
+  askBtn.disabled = true;
+  askSpinner.classList.add("active");
+  askSpinnerText.textContent = "Searching documents for relevant context…";
+
+  try {
+    const res = await fetch("/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question }),
+    });
+
+    askSpinnerText.textContent = "Generating answer with the local LLM…";
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.detail || `Request failed (${res.status})`);
+    }
+
+    renderAnswer(data);
+  } catch (err) {
+    showAlert(askAlert, "error", err.message || String(err));
+  } finally {
+    askSpinner.classList.remove("active");
+    askBtn.disabled = false;
+  }
+}
+
+askBtn.addEventListener("click", ask);
+questionInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); ask(); }
+});
+
+
+/* ============================================================
+   Render answer + sources + retrieved chunks
+   ============================================================ */
+function renderAnswer(data) {
+  const answer = data.answer ?? "";
+  const sources = data.sources ?? [];
+  const chunks  = data.chunks ?? [];
+
+  const sourcesHtml = sources.length
+    ? `<div class="source-chips">${sources.map(s =>
+        `<span class="source-chip">📄 ${escapeHtml(s)}</span>`
+      ).join("")}</div>`
+    : `<div class="empty">No sources were used for this answer.</div>`;
+
+  const chunksHtml = chunks.length
+    ? chunks.map((c, i) => `
+        <div class="chunk">
+          <div class="chunk-head">
+            <strong>Chunk ${i + 1}</strong>
+            <span class="filename">${escapeHtml(c.filename)}</span>
+            <span class="distance">distance ${Number(c.distance).toFixed(4)}</span>
+          </div>
+          <pre>${escapeHtml(c.text)}</pre>
+        </div>
+      `).join("")
+    : `<div class="empty">No retrieved chunks to show.</div>`;
+
+  answerArea.innerHTML = `
+    <div class="section-label">💡 Answer</div>
+    <div class="answer-box">${escapeHtml(answer)}</div>
+
+    <div class="section-label">📎 Sources</div>
+    ${sourcesHtml}
+
+    <details class="context">
+      <summary>🔬 Retrieved context (${chunks.length} chunk${chunks.length === 1 ? "" : "s"})</summary>
+      ${chunksHtml}
+    </details>
+  `;
+
+  answerArea.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+</script>
+</body>
+</html>

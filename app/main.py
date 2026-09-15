@@ -2,27 +2,26 @@
 app/main.py
 ===========
 
-This file is the Streamlit UI - the only part of the project the user
-directly interacts with. It does NOT contain any RAG logic itself; it
-simply calls the three pipeline modules in order:
+Thin HTTP layer over the existing RAG pipeline. No RAG logic here -
+just JSON in, JSON out. The three pipeline modules are called exactly
+as before:
 
-    ingestion.ingest_documents()          -> builds the searchable index
-    retrieval.retrieve_relevant_chunks()  -> finds relevant context
-    generation.generate_answer()          -> writes the final answer
-
-Keeping the UI free of RAG logic means you could swap Streamlit for a
-different interface (a CLI, a Flask API, etc.) later without touching
-ingestion.py, retriever.py, or generator.py at all.
+    ingestion.ingest_documents()
+    retrieval.retrieve_relevant_chunks()
+    generation.generate_answer()
 """
 
 import os
 import sys
+import shutil
 import tempfile
+from typing import List
 
-import streamlit as st
+from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
-# Allow running this file directly with `streamlit run app/main.py` from the
-# project root, by making sure the project root is on Python's import path.
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ingestion.ingestion import ingest_documents
@@ -30,104 +29,93 @@ from retrieval.retriever import retrieve_relevant_chunks
 from generation.generator import generate_answer
 
 
-st.set_page_config(page_title="Document Q&A System", layout="centered")
+app = FastAPI(title="Document Q&A")
 
-st.title("Document Q&A System")
-st.caption("Ask questions about your own PDF documents, answered by a fully local RAG pipeline.")
-
-
-# ---------------------------------------------------------------------------
-# SECTION 1: DOCUMENT UPLOAD + PROCESSING
-# ---------------------------------------------------------------------------
-st.header("1. Upload Documents")
-
-uploaded_files = st.file_uploader(
-    "Upload one or more PDF files",
-    type=["pdf"],
-    accept_multiple_files=True,
-)
-
-if st.button("Process Documents", type="primary"):
-    if not uploaded_files:
-        # Basic error handling: nothing was uploaded.
-        st.error("Please upload at least one PDF before processing.")
-    else:
-        # Streamlit gives us uploaded files as in-memory objects, but our
-        # ingestion pipeline (via PyMuPDF) expects file PATHS on disk. So we
-        # write each uploaded file to a temporary location first.
-        temp_paths = []
-        temp_dir = tempfile.mkdtemp()
-        for uploaded_file in uploaded_files:
-            temp_path = os.path.join(temp_dir, uploaded_file.name)
-            with open(temp_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            temp_paths.append(temp_path)
-
-        with st.spinner("Processing documents (extracting text, chunking, embedding, storing)..."):
-            try:
-                num_chunks = ingest_documents(temp_paths)
-                st.success(f"Successfully processed {len(uploaded_files)} document(s) into {num_chunks} chunks.")
-            except ValueError as error:
-                # Errors we deliberately raised ourselves in ingestion.py
-                # (e.g. empty/unreadable PDFs) get a friendly message.
-                st.error(str(error))
-            except Exception as error:
-                # Anything unexpected (model download failure, disk issues,
-                # etc.) still gets shown to the user instead of crashing
-                # the whole app silently.
-                st.error(f"Something went wrong while processing documents: {error}")
+HERE = os.path.dirname(os.path.abspath(__file__))
+app.mount("/static", StaticFiles(directory=HERE), name="static")
 
 
-st.divider()
+@app.get("/", response_class=HTMLResponse)
+def index():
+    with open(os.path.join(HERE, "index.html"), "r", encoding="utf-8") as f:
+        return f.read()
 
 
 # ---------------------------------------------------------------------------
-# SECTION 2: QUESTION + ANSWER
+# /ingest  - multipart upload of one or more PDFs
 # ---------------------------------------------------------------------------
-st.header("2. Ask a Question")
+@app.post("/ingest")
+async def ingest(files: List[UploadFile] = File(...)):
+    if not files:
+        raise HTTPException(status_code=400, detail="Please upload at least one PDF.")
 
-question = st.text_input("Ask a question about your documents...")
+    temp_dir = tempfile.mkdtemp()
+    temp_paths = []
+    try:
+        for f in files:
+            # Basic guard: only PDFs
+            if not f.filename.lower().endswith(".pdf"):
+                raise HTTPException(status_code=400, detail=f"Not a PDF: {f.filename}")
+            path = os.path.join(temp_dir, f.filename)
+            with open(path, "wb") as out:
+                shutil.copyfileobj(f.file, out)
+            temp_paths.append(path)
 
-if st.button("Get Answer"):
-    if not question or not question.strip():
-        # Basic error handling: empty question box.
-        st.error("Please type a question before asking.")
-    else:
         try:
-            with st.spinner("Searching documents for relevant context..."):
-                # RETRIEVAL step: find the chunks most relevant to the
-                # question. This is where the "R" in RAG happens.
-                relevant_chunks = retrieve_relevant_chunks(question)
+            num_chunks = ingest_documents(temp_paths)
+        except ValueError as e:
+            # Deliberate, friendly errors from ingestion.py
+            raise HTTPException(status_code=400, detail=str(e))
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Something went wrong while processing documents: {e}",
+            )
 
-            with st.spinner("Generating answer using the local LLM..."):
-                # GENERATION step: turn (question + retrieved context)
-                # into a final natural-language answer. This is the "G"
-                # in RAG.
-                result = generate_answer(question, relevant_chunks)
+        return {
+            "num_chunks": num_chunks,
+            "files": [f.filename for f in files],
+        }
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
-            st.subheader("Answer")
-            st.write(result["answer"])
 
-            st.subheader("Sources")
-            if result["sources"]:
-                for source in result["sources"]:
-                    st.write(f"- {source}")
-            else:
-                st.write("No sources were used for this answer.")
+# ---------------------------------------------------------------------------
+# /ask  - question -> answer + sources + retrieved chunks
+# ---------------------------------------------------------------------------
+class AskRequest(BaseModel):
+    question: str
 
-            # Showing the raw retrieved chunks is optional, but it is
-            # extremely useful for LEARNING and for double-checking that
-            # retrieval actually found the right information - which is
-            # exactly why this project exists.
-            with st.expander("See retrieved context (for learning/debugging)"):
-                for i, chunk in enumerate(relevant_chunks, start=1):
-                    st.markdown(f"**Chunk {i} — from `{chunk['filename']}` (distance: {chunk['distance']:.4f})**")
-                    st.write(chunk["text"])
 
-        except ValueError as error:
-            # Errors we deliberately raised ourselves in retriever.py
-            # (e.g. "no documents indexed yet") get a friendly message
-            # instead of a scary traceback.
-            st.error(str(error))
-        except Exception as error:
-            st.error(f"Something went wrong while answering the question: {error}")
+@app.post("/ask")
+def ask(req: AskRequest):
+    question = (req.question or "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="Please type a question before asking.")
+
+    try:
+        relevant_chunks = retrieve_relevant_chunks(question)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Retrieval failed: {e}")
+
+    try:
+        result = generate_answer(question, relevant_chunks)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
+
+    return JSONResponse(
+        {
+            "answer": result["answer"],
+            "sources": result["sources"],
+            "chunks": [
+                {
+                    "filename": c["filename"],
+                    "distance": c["distance"],
+                    "text": c["text"],
+                }
+                for c in relevant_chunks
+            ],
+        }
+    )

@@ -251,11 +251,6 @@ def store_in_chromadb(chunks: List[Dict], embeddings: List[List[float]]) -> None
         embeddings: Output of create_embeddings(), aligned by index
                     with `chunks`.
     """
-    # A regular database is great for looking things up by an exact key
-    # (e.g. "find the row where id = 5"). But our question is "find the
-    # text whose MEANING is closest to this question" - a regular
-    # database has no concept of "meaning" or "closeness".
-    #
     # A VECTOR DATABASE like ChromaDB is built specifically to store
     # vectors (embeddings) and quickly answer "which stored vectors are
     # most similar to this new vector?" - which is exactly the operation
@@ -308,11 +303,6 @@ def ingest_documents(pdf_paths: List[str]) -> int:
     Raises:
         ValueError: if no valid text could be extracted from any PDF.
     """
-    # This function exists purely to WIRE TOGETHER the four steps above
-    # in the correct order. Keeping it separate from the individual steps
-    # means the Streamlit app only ever needs to call this one function,
-    # while we (humans reading the code later) can still study each step
-    # in isolation above.
     print("Step 1/4: Extracting text from PDFs...")
     documents = load_documents(pdf_paths)
 
@@ -326,9 +316,7 @@ def ingest_documents(pdf_paths: List[str]) -> int:
     chunks = chunk_documents(documents)
 
     print("Step 3/4: Generating embeddings locally (this may take a moment)...")
-    # Loading the model here (instead of at import time) means the
-    # (fairly large) model file is only downloaded/loaded when we
-    # actually need to ingest something.
+    
     embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME)
     embeddings = create_embeddings(chunks, embedding_model)
 
